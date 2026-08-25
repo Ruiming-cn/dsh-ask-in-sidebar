@@ -13,7 +13,13 @@ main conversation's existing context without modifying or reloading it.
 - Clicking it opens a right-side panel with:
   - the quoted selected text,
   - a question/composer input,
-  - a running discussion transcript.
+  - a running discussion transcript,
+  - live streaming output,
+  - a collapsible thinking process,
+  - timing metadata (time to first thought, first token, total duration, and
+    token usage when available).
+- Assistant answers are rendered as safe Markdown: headings, lists, inline
+  code, code blocks, blockquotes, links, and tables.
 - The first question is answered from a snapshot of the main conversation's
   existing LLM message history plus the quoted text.
 - Follow-up questions remain inside the same ephemeral sidebar discussion.
@@ -69,9 +75,11 @@ into the target profile. The package includes:
 ## Configuration
 
 There is no plugin-specific configuration. The sidebar uses the main
-conversation's current provider/model route and system prompt from the latest
-`request/header` event. If no header is available, it falls back to the live
-agent's options, then to the first configured LLM provider.
+conversation's current provider/model route; if no `request/header` is
+available, it falls back to the live agent's options, then to the first
+configured LLM provider. The sidebar uses a small dedicated tool-less system
+prompt so it answers from the supplied context instead of trying to use the
+main agent's tools.
 
 ## Context snapshot boundaries
 
@@ -90,8 +98,8 @@ agent's options, then to the first configured LLM provider.
 
 ## Limitations
 
-- The sidebar answers are plain text; no markdown rendering or tool execution
-  is performed inside the panel.
+- The Markdown renderer is intentionally lightweight; it does not cover every
+  Markdown extension (nested tables, footnotes, task lists, etc.).
 - The plugin does not provide tools to the sidebar model, so it cannot call
   host tools or mutate the workspace from the panel.
 - Model context follows the main session. Very long main conversations may

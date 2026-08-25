@@ -8,6 +8,7 @@ import {
   formatInitialPrompt,
   normalizeHistory,
   normalizeText,
+  sanitizeMainMessages,
   streamAnswerText,
 } from '../src/core.js'
 
@@ -111,6 +112,44 @@ test('callConfigFromAgent extracts agent options', () => {
   assert.equal(callConfigFromAgent({ options: {} }), null)
 })
 
+test('sanitizeMainMessages drops tool calls/results and keeps text', () => {
+  const messages = [
+    {
+      role: 'user',
+      content: [{ type: 'text', text: 'hello' }],
+    },
+    {
+      role: 'assistant',
+      content: [
+        { type: 'text', text: 'I will call' },
+        { type: 'tool-call', id: 'c1', name: 'tool', arguments: '{}' },
+      ],
+    },
+    {
+      role: 'user',
+      content: [{ type: 'tool-result', toolCallId: 'c1', content: [{ type: 'text', text: 'ok' }] }],
+    },
+  ]
+  const sanitized = sanitizeMainMessages(messages)
+  assert.equal(sanitized.length, 2)
+  assert.equal(sanitized[0].content[0].text, 'hello')
+  assert.equal(sanitized[1].role, 'assistant')
+  assert.deepEqual(sanitized[1].content, [{ type: 'text', text: 'I will call' }])
+})
+
+test('sanitizeMainMessages drops a trailing incomplete tool-call assistant message', () => {
+  const messages = [
+    { role: 'user', content: [{ type: 'text', text: 'q' }] },
+    {
+      role: 'assistant',
+      content: [{ type: 'tool-call', id: 'c1', name: 'tool', arguments: '{}' }],
+    },
+  ]
+  const sanitized = sanitizeMainMessages(messages)
+  assert.equal(sanitized.length, 1)
+  assert.equal(sanitized[0].role, 'user')
+})
+
 test('streamAnswerText collects text deltas and ignores reasoning', async () => {
   const stream = [
     { type: 'text-delta', index: 0, text: 'Hel' },
@@ -120,6 +159,26 @@ test('streamAnswerText collects text deltas and ignores reasoning', async () => 
   ]
   const text = await streamAnswerText(stream)
   assert.equal(text, 'Hello')
+})
+
+test('streamAnswerText does not duplicate text when both deltas and block-end arrive', async () => {
+  const stream = [
+    { type: 'text-delta', index: 0, text: 'Hello' },
+    { type: 'block-end', index: 0, block: { type: 'text', text: 'Hello' } },
+    { type: 'finish', reason: { kind: 'stop' } },
+  ]
+  const text = await streamAnswerText(stream)
+  assert.equal(text, 'Hello')
+})
+
+test('streamAnswerText uses block-end when no delta arrived for that block', async () => {
+  const stream = [
+    { type: 'block-start', index: 0, blockType: 'text' },
+    { type: 'block-end', index: 0, block: { type: 'text', text: 'Whole block' } },
+    { type: 'finish', reason: { kind: 'stop' } },
+  ]
+  const text = await streamAnswerText(stream)
+  assert.equal(text, 'Whole block')
 })
 
 test('streamAnswerText throws on an error finish', async () => {

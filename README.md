@@ -12,6 +12,10 @@
   - 引用的选中文本
   - 问题输入框
   - 持续更新的讨论记录
+  - 实时流式输出
+  - 可折叠的思考过程
+  - 思考时间、首字时间、总耗时和 token 用量（可用时）
+- 回答以 Markdown 安全渲染，支持标题、列表、行内代码、代码块、引用、链接和表格。
 - 首个问题基于主对话在发起提问时的已有 LLM 消息历史快照 + 引用文本进行回答。
 - 同一侧边栏讨论内支持连续追问。
 - 关闭面板即丢弃当前讨论及其 host 端内存快照。
@@ -54,7 +58,7 @@ dsh plugin --profile web add /path/to/dsh-ask-in-sidebar
 
 ## 配置
 
-无插件专用配置。侧边栏使用主对话当前使用的 provider/model 路由和最新 `request/header` 中的 system prompt。若没有 header，则依次回退到当前 agent options、第一个已配置的 LLM provider。
+无插件专用配置。侧边栏使用主对话当前使用的 provider/model 路由；若没有 `request/header`，则依次回退到当前 agent options、第一个已配置的 LLM provider。侧边栏使用一个轻量的“只回答、不调用工具”的独立 system prompt，避免复用主 Agent 的复杂工具系统提示。
 
 ## 上下文快照边界
 
@@ -66,7 +70,7 @@ dsh plugin --profile web add /path/to/dsh-ask-in-sidebar
 
 ## 限制
 
-- 侧边栏回答以纯文本展示，不在面板内做 Markdown 渲染或工具执行。
+- Markdown 渲染是轻量实现，未覆盖全部 Markdown 扩展语法（例如复杂表格嵌套、脚注、任务列表等）。
 - 插件不向侧边栏模型提供任何工具，因此无法从面板调用 host 工具或修改工作区。
 - 模型上下文跟随主会话；主对话很长时，侧边栏请求也会较大，因为完整派生历史会被复用。
 - 临时快照是进程内状态。host 重启后快照丢失；重启后的追问会回退到当前主对话上下文快照。
