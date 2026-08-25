@@ -188,3 +188,23 @@ test('streamAnswerText throws on an error finish', async () => {
   ]
   await assert.rejects(() => streamAnswerText(stream), /boom/)
 })
+
+test('streamAnswerText throws with a generic message on an aborted finish', async () => {
+  const stream = [
+    { type: 'text-delta', index: 0, text: 'partial' },
+    { type: 'finish', reason: { kind: 'aborted' } },
+  ]
+  await assert.rejects(() => streamAnswerText(stream), /model request aborted/)
+})
+
+test('streamAnswerText ignores malformed chunks and non-text deltas', async () => {
+  const stream = [
+    null,
+    { type: 'unexpected' },
+    { type: 'text-delta', index: 0, text: 123 },
+    { type: 'text-delta', index: 1, text: 'ok' },
+    { type: 'finish', reason: { kind: 'stop' } },
+  ]
+  const text = await streamAnswerText(stream)
+  assert.equal(text, 'ok')
+})
