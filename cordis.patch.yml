@@ -1,0 +1,7 @@
+# dsh-ask-in-sidebar bundle layer: inserts the plugin row.
+# Loaded via `dsh plugin --profile <name> add` — the row id stays stable so
+# re-adds and profile patches can target it.
+- insert:
+    - id: dsh-ask-in-sidebar
+      name: dsh-ask-in-sidebar
+      config: {}
