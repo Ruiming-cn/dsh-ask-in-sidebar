@@ -2,6 +2,10 @@
 
 [English](./README.en.md) | [中文](./README.md)
 
+[![DSH Plugin](https://img.shields.io/badge/DSH-Plugin-1f6feb?style=flat-square)](https://github.com/Ruiming-cn/dsh-ask-in-sidebar)
+[![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/Ruiming-cn/dsh-ask-in-sidebar?style=flat-square)](https://github.com/Ruiming-cn/dsh-ask-in-sidebar/releases)
+
 一个 DeepSeek Harness (DSH) Web 插件：在助手回答中选中任意文本，即可在右侧临时侧边栏中基于主对话现有上下文提问，不打断、不修改主对话。
 
 ## 功能特性
@@ -33,10 +37,11 @@
 要求：本地 DSH Web profile，Node.js 20+。
 
 ```bash
-# 在插件目录中构建
-npm run build
+# 一键安装（从 GitHub 源码构建，将 web 替换为你的 profile 名）
+dsh plugin --profile web add github:Ruiming-cn/dsh-ask-in-sidebar
 
-# 安装到指定 DSH profile（将 web 替换为你的 profile 名）
+# 或从本地检出构建后再安装
+npm run build
 dsh plugin --profile web add /path/to/dsh-ask-in-sidebar
 ```
 
