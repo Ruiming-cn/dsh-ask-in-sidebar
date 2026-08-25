@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- CI now runs on Node 20 and 22, installs from the committed lockfile, and fails
+  when the committed `lib/` is stale.
+- Added unit tests for the prompt/message helpers and the stream edge cases
+  (aborted finish, malformed chunks, non-text deltas).
+- READMEs gain release badges and a one-command install line.
+
 ## 0.1.1
 
 - Stream sidebar answers over SSE instead of waiting for a full JSON reply.
