@@ -2,6 +2,10 @@
 
 [English](./README.en.md) | [中文](./README.md)
 
+[![DSH Plugin](https://img.shields.io/badge/DSH-Plugin-1f6feb?style=flat-square)](https://github.com/Ruiming-cn/dsh-ask-in-sidebar)
+[![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/Ruiming-cn/dsh-ask-in-sidebar?style=flat-square)](https://github.com/Ruiming-cn/dsh-ask-in-sidebar/releases)
+
 A DeepSeek Harness (DSH) web plugin that lets you select text in an assistant
 answer and ask questions about it in an ephemeral right-side panel, using the
 main conversation's existing context without modifying or reloading it.
@@ -46,10 +50,11 @@ main conversation's existing context without modifying or reloading it.
 Requirements: a local DSH web profile with Node.js 20+.
 
 ```bash
-# from the plugin checkout
-npm run build
+# one-command install from GitHub (replace "web" with your profile name if needed)
+dsh plugin --profile web add github:Ruiming-cn/dsh-ask-in-sidebar
 
-# add to the web profile (replace "web" with your profile name if needed)
+# or build from a local checkout and install it
+npm run build
 dsh plugin --profile web add /path/to/dsh-ask-in-sidebar
 ```
 
