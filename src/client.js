@@ -830,8 +830,7 @@ window.__ModuleLoader__.load({
       // Register an invisible shell-overlay entry so the client skeleton is a
       // valid slot-based DSH plugin. The real UI is a plain-DOM overlay; this
       // no-op entry is only the registration anchor required by the harness.
-      if (ctx.slots && typeof ctx.slots.register === 'function') {
-        ctx.effect(() => ctx.slots.register({
+      ctx.slots.inject('shell.overlay', () => ctx.slots.register({
           name: 'shell.overlay',
           id: 'dsh-ask-in-sidebar',
           order: 999,
@@ -839,14 +838,8 @@ window.__ModuleLoader__.load({
         }, function DshAskInSidebarOverlayNoop() {
           return null
         }), 'dsh-ask-in-sidebar: shell overlay noop')
-      }
 
       sessionsSvc = ctx.get('sessions')
-      if (!sessionsSvc) {
-        ctx.inject(['sessions'], (sub) => {
-          sessionsSvc = sub.sessions
-        })
-      }
       ctx.effect(() => {
         ensurePanelStyle()
         document.addEventListener('selectionchange', handleSelectionChange)
@@ -877,6 +870,6 @@ window.__ModuleLoader__.load({
       }, 'dsh-ask-in-sidebar: dom listeners')
     }
 
-    return { apply, inject: ['slots'] }
+    return { apply, inject: ['slots', 'sessions'] }
   },
 })

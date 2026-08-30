@@ -3,6 +3,7 @@
 [English](./README.en.md) | [中文](./README.md)
 
 [![DSH Plugin](https://img.shields.io/badge/DSH-Plugin-1f6feb?style=flat-square)](https://github.com/Ruiming-cn/dsh-ask-in-sidebar)
+[![Awesome DSH Plugin](https://img.shields.io/badge/Awesome-DSH_Plugin-ff69b4?style=flat-square)](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/Ruiming-cn/dsh-ask-in-sidebar?style=flat-square)](https://github.com/Ruiming-cn/dsh-ask-in-sidebar/releases)
 
@@ -53,6 +54,9 @@ Requirements: a local DSH web profile with Node.js 20+.
 # one-command install from GitHub (replace "web" with your profile name if needed)
 dsh plugin --profile web add github:Ruiming-cn/dsh-ask-in-sidebar
 
+# or install the pinned GitHub release tarball
+dsh plugin --profile web add https://github.com/Ruiming-cn/dsh-ask-in-sidebar/archive/refs/tags/v0.2.0.tar.gz
+
 # or build from a local checkout and install it
 npm run build
 dsh plugin --profile web add /path/to/dsh-ask-in-sidebar
@@ -65,7 +69,7 @@ into the target profile. The package includes:
 - `lib/index.js` – host half (HTTP endpoints)
 - `lib/client.js` – browser half (selection action + sidebar panel)
 - `cordis.patch.yml` – stable bundle-layer insert
-- `dsh.plugin.json` + `package.json` `dsh` metadata
+- `package.json` `dsh.bundle` and `dsh.client` metadata
 
 ## Usage
 

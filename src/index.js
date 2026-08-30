@@ -22,7 +22,7 @@ import {
 } from './core.js'
 
 export const name = 'dsh-ask-in-sidebar'
-export const inject = []
+export const inject = ['webServer', 'connection']
 
 const ANSWER_PATH = '/__dsh-ask-in-sidebar/answer'
 const ANSWER_STREAM_PATH = '/__dsh-ask-in-sidebar/answer-stream'
@@ -74,18 +74,10 @@ function readBody(req) {
 // The endpoints are read-only and never mutate the workspace, but they do
 // read the user's session history, so cross-site browsers must not trigger
 // them. Same guard used by dsh-more-session-operations.
-function isSameOriginRequest(req) {
-  const origin = req.headers && req.headers.origin
-  if (origin) {
-    try {
-      const host = req.headers.host
-      if (!host || new URL(origin).host !== host) return false
-    } catch {
-      return false
-    }
-  }
-  const fetchSite = req.headers && req.headers['sec-fetch-site']
-  if (fetchSite && fetchSite !== 'same-origin' && fetchSite !== 'none') return false
+function rejectConnectionRequest(connection, req, res) {
+  const rejection = connection.requestRejection(req)
+  if (rejection === undefined) return false
+  sendJson(res, rejection, { error: rejection === 401 ? 'unauthorized' : 'forbidden' })
   return true
 }
 
@@ -314,7 +306,7 @@ async function answerStream(ctx, payload, req, res) {
 
 // --- plugin -------------------------------------------------------------------
 
-function registerHttp(host, targetCtx) {
+function registerHttp(host, connection, targetCtx) {
   const timer = setInterval(() => sweepDiscussions(), SNAPSHOT_SWEEP_MS)
   if (typeof timer.unref === 'function') timer.unref()
 
@@ -327,8 +319,7 @@ function registerHttp(host, targetCtx) {
           sendJson(res, 405, { error: 'method not allowed' })
           return
         }
-        if (!isSameOriginRequest(req)) {
-          sendJson(res, 403, { error: 'cross-origin request rejected' })
+        if (rejectConnectionRequest(connection, req, res)) {
           return
         }
         let payload = {}
@@ -357,8 +348,7 @@ function registerHttp(host, targetCtx) {
           sendJson(res, 405, { error: 'method not allowed' })
           return
         }
-        if (!isSameOriginRequest(req)) {
-          sendJson(res, 403, { error: 'cross-origin request rejected' })
+        if (rejectConnectionRequest(connection, req, res)) {
           return
         }
         let payload = {}
@@ -393,8 +383,7 @@ function registerHttp(host, targetCtx) {
           sendJson(res, 405, { error: 'method not allowed' })
           return
         }
-        if (!isSameOriginRequest(req)) {
-          sendJson(res, 403, { error: 'cross-origin request rejected' })
+        if (rejectConnectionRequest(connection, req, res)) {
           return
         }
         let payload = {}
@@ -425,12 +414,5 @@ function registerHttp(host, targetCtx) {
 }
 
 export function apply(ctx) {
-  const ws = ctx.get('webServer')
-  if (ws !== undefined) {
-    registerHttp(ws, ctx)
-  } else {
-    ctx.inject(['webServer'], (sub) => {
-      registerHttp(sub.webServer, sub)
-    })
-  }
+  registerHttp(ctx.get('webServer'), ctx.get('connection'), ctx)
 }

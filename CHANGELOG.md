@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0 - 2026-08-30
+
+- Migrated the host routes to the Alpha.2 DSH Connection Origin and browser-authentication checks.
+- Registered the client shell anchor through `ctx.slots.inject` and declared the current session service dependency.
+- Removed the obsolete `dsh.plugin.json`; `package.json` is the only DSH manifest.
+- Added the Alpha.2 package metadata, release tarball installation path, and type declarations.
+
 ## Unreleased
 
 - CI now runs on Node 20 and 22, installs from the committed lockfile, and fails

@@ -3,6 +3,7 @@
 [English](./README.en.md) | [中文](./README.md)
 
 [![DSH Plugin](https://img.shields.io/badge/DSH-Plugin-1f6feb?style=flat-square)](https://github.com/Ruiming-cn/dsh-ask-in-sidebar)
+[![Awesome DSH Plugin](https://img.shields.io/badge/Awesome-DSH_Plugin-ff69b4?style=flat-square)](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/Ruiming-cn/dsh-ask-in-sidebar?style=flat-square)](https://github.com/Ruiming-cn/dsh-ask-in-sidebar/releases)
 
@@ -40,6 +41,9 @@
 # 一键安装（从 GitHub 源码构建，将 web 替换为你的 profile 名）
 dsh plugin --profile web add github:Ruiming-cn/dsh-ask-in-sidebar
 
+# 或从固定版本 Release 安装
+dsh plugin --profile web add https://github.com/Ruiming-cn/dsh-ask-in-sidebar/archive/refs/tags/v0.2.0.tar.gz
+
 # 或从本地检出构建后再安装
 npm run build
 dsh plugin --profile web add /path/to/dsh-ask-in-sidebar
@@ -50,7 +54,7 @@ dsh plugin --profile web add /path/to/dsh-ask-in-sidebar
 - `lib/index.js` — host 半端（HTTP 接口）
 - `lib/client.js` — 浏览器半端（选区操作 + 侧边栏面板）
 - `cordis.patch.yml` — bundle 层插入配置
-- `dsh.plugin.json` 与 `package.json` 的 `dsh` 元数据
+- `package.json` 中的 `dsh.bundle` 与 `dsh.client` 元数据
 
 ## 使用
 

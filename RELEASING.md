@@ -15,15 +15,15 @@ npm run check
 npm pack
 
 # 3. Tag and create the GitHub release with the tarball asset
-gh release create v0.1.0 \
+gh release create v0.2.0 \
   --repo Ruiming-cn/dsh-ask-in-sidebar \
-  --title "dsh-ask-in-sidebar v0.1.0" \
+  --title "dsh-ask-in-sidebar v0.2.0" \
   --notes "See CHANGELOG.md" \
-  ./dsh-ask-in-sidebar-0.1.0.tgz
+  ./dsh-ask-in-sidebar-0.2.0.tgz
 
 # 4. Verify repository metadata
 gh repo view Ruiming-cn/dsh-ask-in-sidebar --json description,repositoryTopics
-gh release view v0.1.0 --repo Ruiming-cn/dsh-ask-in-sidebar
+gh release view v0.2.0 --repo Ruiming-cn/dsh-ask-in-sidebar
 ```
 
 ## Repository metadata
