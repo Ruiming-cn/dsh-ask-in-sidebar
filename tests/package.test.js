@@ -14,6 +14,8 @@ test('package metadata matches the Alpha.2 DSH plugin contract', () => {
   assert.equal(pkg.dsh?.client?.platform, 'web')
   assert.ok(pkg.dsh?.bundle?.patch)
   assert.ok(!pkg.files.includes('dsh.plugin.json'))
+  assert.equal(pkg.exports?.['.']?.types, './lib/index.d.ts')
+  assert.equal(pkg.exports?.['./client']?.types, './lib/client.d.ts')
   assert.ok(pkg.exports?.['./client']?.default)
 })
 
