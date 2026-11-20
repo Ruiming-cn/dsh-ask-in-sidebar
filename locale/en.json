@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Ask in sidebar",
+    "description": "Ask questions about text you select in an assistant answer, answered in an ephemeral right-side panel from a snapshot of the main conversation. Select text inside an assistant answer and click the Ask in Sidebar button. The panel keeps the sidebar discussion in memory only, answers from the main conversation as it was when the discussion started, and cannot call tools or modify the workspace."
+  }
+}

@@ -25,6 +25,8 @@ main conversation's existing context without modifying or reloading it.
     token usage when available).
 - Assistant answers are rendered as safe Markdown: headings, lists, inline
   code, code blocks, blockquotes, links, and tables.
+- While an answer streams, **Stop** aborts it and keeps the text received so
+  far; completed answers offer **Copy** for the raw Markdown.
 - The first question is answered from a snapshot of the main conversation's
   existing LLM message history plus the quoted text.
 - Follow-up questions remain inside the same ephemeral sidebar discussion.
@@ -48,14 +50,15 @@ main conversation's existing context without modifying or reloading it.
 
 ## Installation
 
-Requirements: a local DSH web profile with Node.js 20+.
+Requirements: a local DSH web profile (verified against DSH 0.2.2-rc.5) with
+Node.js 20+.
 
 ```bash
 # one-command install from GitHub (replace "web" with your profile name if needed)
 dsh plugin --profile web add github:Ruiming-cn/dsh-ask-in-sidebar
 
-# or install the pinned GitHub release tarball
-dsh plugin --profile web add https://github.com/Ruiming-cn/dsh-ask-in-sidebar/archive/refs/tags/v0.2.0.tar.gz
+# or install the prebuilt pinned GitHub release tarball (no build step)
+dsh plugin --profile web add https://github.com/Ruiming-cn/dsh-ask-in-sidebar/releases/download/v0.2.1/dsh-ask-in-sidebar-0.2.1.tgz
 
 # or build from a local checkout and install it
 npm run build
@@ -79,7 +82,9 @@ into the target profile. The package includes:
 4. Type a question such as "Why is it done this way?" and press Enter or click
    **Send**.
 5. Read the answer in the panel and ask follow-up questions as needed.
-6. Close the panel at any time to return to the main conversation.
+6. Click **Stop** while an answer streams to abort it, or **Copy** on a
+   completed answer to copy its Markdown.
+7. Close the panel at any time to return to the main conversation.
 
 ## Configuration
 
@@ -141,9 +146,8 @@ Release workflow: see [RELEASING.md](./RELEASING.md).
 - [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (MIT)
   provides the DSH plugin, session, LLM, and web runtime this plugin runs on.
 - The host-side HTTP route + same-origin guard pattern and the browser
-  `window.__ModuleLoader__` / plain-DOM injection pattern are informed by the
-  existing MIT-licensed DSH plugins:
-  - [`dsh-more-session-operations`](https://github.com/Ruiming-cn/dsh-more-session-operations)
+  `window.__ModuleLoader__` / plain-DOM injection pattern are informed by
+  existing MIT-licensed DSH plugins that use the same patterns:
   - [`dsh-better-at`](https://github.com/Ruiming-cn/dsh-better-at)
 - No third-party code is copied into this repository. The implementation is
   original and attributed to the DSH ecosystem where API shape or patterns are

@@ -91,7 +91,23 @@ function sweepDiscussions(now = Date.now()) {
   }
 }
 
-function readSnapshot(ctx, sessionId) {
+async function readLatestHeader(ctx, sessionId) {
+  const sessionQuery = ctx.get('sessionQuery')
+  if (!sessionQuery || typeof sessionQuery.readSession !== 'function') {
+    console.warn('[dsh-ask-in-sidebar] sessionQuery unavailable; answering without the main request header')
+    return undefined
+  }
+  try {
+    const log = await sessionQuery.readSession(sessionId)
+    return findLatestHeader(log.events)
+  } catch (error) {
+    const reason = error && error.message ? error.message : String(error)
+    console.warn(`[dsh-ask-in-sidebar] could not read the main session log: ${reason}`)
+    return undefined
+  }
+}
+
+async function readSnapshot(ctx, sessionId) {
   const sessions = ctx.get('sessions')
   if (!sessions || typeof sessions.get !== 'function') {
     throw new HttpError('sessions service unavailable', 503)
@@ -106,15 +122,14 @@ function readSnapshot(ctx, sessionId) {
   } catch {
     messages = []
   }
-  const events = Array.isArray(session.events) ? session.events : []
-  const header = findLatestHeader(events)
+  const header = await readLatestHeader(ctx, sessionId)
   return { sessionId, messages: Array.isArray(messages) ? messages : [], header, capturedAt: Date.now() }
 }
 
-function getOrCreateSnapshot(ctx, discussionId, sessionId) {
+async function getOrCreateSnapshot(ctx, discussionId, sessionId) {
   const existing = discussions.get(discussionId)
   if (existing && existing.sessionId === sessionId) return existing
-  const snapshot = readSnapshot(ctx, sessionId)
+  const snapshot = await readSnapshot(ctx, sessionId)
   discussions.set(discussionId, snapshot)
   sweepDiscussions()
   return snapshot
@@ -182,7 +197,7 @@ async function prepareAnswer(ctx, payload) {
   const history = normalizeHistory(payload.history)
   const existing = discussions.get(discussionId)
   const snapshot = history.length === 0 || !existing || existing.sessionId !== sessionId
-    ? getOrCreateSnapshot(ctx, discussionId, sessionId)
+    ? await getOrCreateSnapshot(ctx, discussionId, sessionId)
     : existing
 
   const config = await resolveCallConfig(ctx, snapshot.sessionId, snapshot.header)
@@ -240,6 +255,9 @@ async function answerStream(ctx, payload, req, res) {
   let usage = null
   let answerText = ''
   let reasoningText = ''
+  // Some adapters emit only block-end for text. Track which blocks already
+  // produced deltas so the complete block is appended once, never doubled.
+  const seenTextDeltas = new Set()
 
   write({ type: 'start', provider: config.provider, model: config.model, startedAt })
 
@@ -252,8 +270,16 @@ async function answerStream(ctx, payload, req, res) {
         write({ type: 'reasoning', text: typeof chunk.text === 'string' ? chunk.text : '' })
       } else if (chunk.type === 'text-delta') {
         if (firstTextAt === null) firstTextAt = Date.now()
+        seenTextDeltas.add(chunk.index)
         answerText += typeof chunk.text === 'string' ? chunk.text : ''
         write({ type: 'text', text: typeof chunk.text === 'string' ? chunk.text : '' })
+      } else if (chunk.type === 'block-end'
+        && chunk.block && chunk.block.type === 'text'
+        && typeof chunk.block.text === 'string'
+        && !seenTextDeltas.has(chunk.index)) {
+        if (firstTextAt === null) firstTextAt = Date.now()
+        answerText += chunk.block.text
+        write({ type: 'text', text: chunk.block.text })
       } else if (chunk.type === 'usage') {
         usage = chunk.usage
         write({ type: 'usage', usage: chunk.usage })

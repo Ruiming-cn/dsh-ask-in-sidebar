@@ -21,6 +21,7 @@
   - 可折叠的思考过程
   - 思考时间、首字时间、总耗时和 token 用量（可用时）
 - 回答以 Markdown 安全渲染，支持标题、列表、行内代码、代码块、引用、链接和表格。
+- 回答流式生成时可点击 **停止** 中止，已收到的内容会保留；完成的回答可点击 **复制** 复制 Markdown 原文。
 - 首个问题基于主对话在发起提问时的已有 LLM 消息历史快照 + 引用文本进行回答。
 - 同一侧边栏讨论内支持连续追问。
 - 关闭面板即丢弃当前讨论及其 host 端内存快照。
@@ -35,14 +36,14 @@
 
 ## 安装
 
-要求：本地 DSH Web profile，Node.js 20+。
+要求：本地 DSH Web profile（已在 DSH 0.2.2-rc.5 上验证），Node.js 20+。
 
 ```bash
 # 一键安装（从 GitHub 源码构建，将 web 替换为你的 profile 名）
 dsh plugin --profile web add github:Ruiming-cn/dsh-ask-in-sidebar
 
-# 或从固定版本 Release 安装
-dsh plugin --profile web add https://github.com/Ruiming-cn/dsh-ask-in-sidebar/archive/refs/tags/v0.2.0.tar.gz
+# 或从固定版本 Release 的预构建包安装（无需构建）
+dsh plugin --profile web add https://github.com/Ruiming-cn/dsh-ask-in-sidebar/releases/download/v0.2.1/dsh-ask-in-sidebar-0.2.1.tgz
 
 # 或从本地检出构建后再安装
 npm run build
@@ -63,7 +64,8 @@ dsh plugin --profile web add /path/to/dsh-ask-in-sidebar
 3. 点击 **在侧边栏提问**。
 4. 输入问题（例如“为什么这么做？”或“这是什么意思？”），按 Enter 或点击 **发送**。
 5. 在面板中阅读回答，并可继续追问。
-6. 随时关闭面板返回主对话。
+6. 回答生成过程中可点击 **停止** 中止；回答完成后可点击 **复制** 复制 Markdown 原文。
+7. 随时关闭面板返回主对话。
 
 ## 配置
 
@@ -102,7 +104,6 @@ npm run check   # test + build
 ## 鸣谢
 
 - [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（MIT）：本插件运行的 DSH 插件、会话、LLM 与 Web 运行时。
-- host 端 HTTP 路由 + 同源防护模式、浏览器 `window.__ModuleLoader__` / 纯 DOM 注入模式参考了以下 MIT 许可的现有 DSH 插件：
-  - [`dsh-more-session-operations`](https://github.com/Ruiming-cn/dsh-more-session-operations)
+- host 端 HTTP 路由 + 同源防护模式、浏览器 `window.__ModuleLoader__` / 纯 DOM 注入模式参考了 DSH 生态中同样采用该模式的 MIT 许可插件：
   - [`dsh-better-at`](https://github.com/Ruiming-cn/dsh-better-at)
 - 本仓库未复制第三方代码；实现为原创，并在 API 形状或模式衍生自 DSH 生态处注明来源。

@@ -28,6 +28,11 @@ window.__ModuleLoader__.load({
         thought: '思考过程',
         close: '关闭',
         closeAria: '关闭侧边栏讨论',
+        stop: '停止',
+        stopAria: '停止生成回答',
+        copy: '复制',
+        copied: '已复制',
+        copyAria: '复制回答 Markdown',
         error: '出错了',
         empty: '请输入问题。',
         started: '已开始',
@@ -45,6 +50,11 @@ window.__ModuleLoader__.load({
         thought: 'Thinking',
         close: 'Close',
         closeAria: 'Close sidebar discussion',
+        stop: 'Stop',
+        stopAria: 'Stop generating the answer',
+        copy: 'Copy',
+        copied: 'Copied',
+        copyAria: 'Copy the answer Markdown',
         error: 'Error',
         empty: 'Please enter a question.',
         started: 'Started',
@@ -352,6 +362,17 @@ window.__ModuleLoader__.load({
         'border-radius:10px', 'background:var(--dsw-alias-accent-solid,#4f6bfe)',
         'color:#fff', 'font:inherit', 'font-size:13px', 'line-height:20px', 'cursor:pointer',
       ].join(';'),
+      stopBtn: [
+        'flex:none', 'padding:8px 14px', 'border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.4))',
+        'border-radius:10px', 'background:transparent',
+        'color:var(--dsw-alias-label-primary,#1f1f1f)', 'font:inherit', 'font-size:13px',
+        'line-height:20px', 'cursor:pointer',
+      ].join(';'),
+      copyBtn: [
+        'border:none', 'background:transparent', 'padding:2px 6px', 'margin-top:4px',
+        'border-radius:6px', 'color:var(--dsw-alias-label-tertiary,#8a8a8e)',
+        'font:inherit', 'font-size:11px', 'line-height:16px', 'cursor:pointer',
+      ].join(';'),
     }
 
     // --- DOM helpers ------------------------------------------------------------
@@ -361,6 +382,44 @@ window.__ModuleLoader__.load({
       if (style) node.style.cssText = style
       if (text !== undefined) node.textContent = text
       return node
+    }
+
+    async function copyText(text) {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(text)
+        return
+      }
+      // Clipboard API is unavailable outside a secure context.
+      const area = el('textarea', 'position:fixed;left:-9999px;top:0;opacity:0;')
+      area.value = text
+      document.body.appendChild(area)
+      try {
+        area.select()
+        if (!document.execCommand('copy')) throw new Error('copy failed')
+      } finally {
+        area.remove()
+      }
+    }
+
+    function appendCopyControl(node, text) {
+      const button = el('button', S.copyBtn, t('copy'))
+      button.type = 'button'
+      button.setAttribute('aria-label', t('copyAria'))
+      button.addEventListener('click', async () => {
+        try {
+          await copyText(text)
+        } catch {
+          return
+        }
+        button.textContent = t('copied')
+        button.disabled = true
+        setTimeout(() => {
+          if (!button.isConnected) return
+          button.textContent = t('copy')
+          button.disabled = false
+        }, 1200)
+      })
+      node.appendChild(button)
     }
 
     function appendMessage(container, item) {
@@ -385,6 +444,7 @@ window.__ModuleLoader__.load({
           const metaEl = el('div', S.meta, item.meta)
           node.appendChild(metaEl)
         }
+        if (item.text) appendCopyControl(node, item.text)
       } else {
         const body = el('div', '', item.text)
         node.appendChild(body)
@@ -416,6 +476,18 @@ window.__ModuleLoader__.load({
       return `${(ms / 1000).toFixed(1)}s`
     }
 
+    function streamDurations(state) {
+      return {
+        totalMs: Date.now() - state.startedAt,
+        firstReasoningMs: state.firstReasoningAt === null ? null : state.firstReasoningAt - state.startedAt,
+        firstTextMs: state.firstTextAt === null ? null : state.firstTextAt - state.startedAt,
+      }
+    }
+
+    function isAbortError(error) {
+      return Boolean(error) && (error.name === 'AbortError' || error.code === 'ABORT_ERR')
+    }
+
     function metaLine(durations, usage) {
       if (!durations) return ''
       const parts = []
@@ -438,7 +510,7 @@ window.__ModuleLoader__.load({
 
     // --- streaming SSE -----------------------------------------------------------
 
-    function streamAnswer(req, onEvent) {
+    function streamAnswer(req, onEvent, signal) {
       return new Promise((resolve, reject) => {
         fetch(ANSWER_STREAM_PATH, {
           method: 'POST',
@@ -447,6 +519,7 @@ window.__ModuleLoader__.load({
             accept: 'text/event-stream',
           },
           body: JSON.stringify(req),
+          signal,
         }).then(async (res) => {
           if (!res.ok || !res.body) {
             let data = {}
@@ -518,8 +591,13 @@ window.__ModuleLoader__.load({
         errorEl.textContent = discussion.error ? `${t('error')}: ${discussion.error}` : ''
       }
       const sendBtn = panel.querySelector('[data-aiq-send]')
+      const stopBtn = panel.querySelector('[data-aiq-stop]')
       const ta = panel.querySelector('[data-aiq-input]')
-      if (sendBtn) sendBtn.disabled = discussion.thinking || discussion.pending !== null
+      if (sendBtn) {
+        sendBtn.style.display = discussion.thinking ? 'none' : ''
+        sendBtn.disabled = discussion.thinking || discussion.pending !== null
+      }
+      if (stopBtn) stopBtn.style.display = discussion.thinking ? '' : 'none'
       if (ta) ta.disabled = discussion.thinking
     }
 
@@ -572,7 +650,17 @@ window.__ModuleLoader__.load({
       sendBtn.type = 'button'
       sendBtn.setAttribute('data-aiq-send', '1')
       sendBtn.addEventListener('click', () => sendCurrentQuestion())
+      const stopBtn = el('button', S.stopBtn, t('stop'))
+      stopBtn.type = 'button'
+      stopBtn.setAttribute('data-aiq-stop', '1')
+      stopBtn.setAttribute('aria-label', t('stopAria'))
+      stopBtn.title = t('stop')
+      stopBtn.style.display = 'none'
+      stopBtn.addEventListener('click', () => {
+        if (discussion && discussion.abort) discussion.abort.abort()
+      })
       composer.appendChild(ta)
+      composer.appendChild(stopBtn)
       composer.appendChild(sendBtn)
       p.appendChild(composer)
 
@@ -667,30 +755,58 @@ window.__ModuleLoader__.load({
         }
       }
 
-      try {
-        const final = await streamAnswer(req, handleEvent)
-        if (!discussion || discussion.id !== req.discussionId) return
-        const durations = final.durations || {}
-        const meta = metaLine(durations, final.usage || null)
+      const controller = new AbortController()
+      discussion.abort = controller
+
+      const commitAnswer = (answer, reasoning, durations, usage) => {
         discussion.history.push({ role: 'user', text: displayText })
         discussion.history.push({
           role: 'assistant',
-          text: final.answer || streamState.answer,
-          meta,
-          reasoning: (final.reasoning || streamState.reasoning || '').trim(),
+          text: answer,
+          meta: metaLine(durations, usage),
+          reasoning: (reasoning || '').trim(),
         })
         discussion.pending = null
         discussion.thinking = false
         discussion.stream = null
+        discussion.abort = null
         discussion.error = ''
         renderTranscript()
         const ta2 = panel && panel.querySelector('[data-aiq-input]')
         if (ta2) ta2.focus()
+      }
+
+      try {
+        const final = await streamAnswer(req, handleEvent, controller.signal)
+        if (!discussion || discussion.id !== req.discussionId) return
+        commitAnswer(
+          final.answer || streamState.answer,
+          final.reasoning || streamState.reasoning,
+          final.durations || {},
+          final.usage || streamState.usage,
+        )
       } catch (err) {
         if (!discussion || discussion.id !== req.discussionId) return
+        if (isAbortError(err)) {
+          if (streamState.answer.trim()) {
+            commitAnswer(streamState.answer, streamState.reasoning, streamDurations(streamState), streamState.usage)
+            return
+          }
+          // Stopped before any visible text: keep the typed question for a retry.
+          discussion.pending = null
+          discussion.thinking = false
+          discussion.stream = null
+          discussion.abort = null
+          discussion.error = ''
+          renderTranscript()
+          const ta2 = panel && panel.querySelector('[data-aiq-input]')
+          if (ta2) ta2.value = question
+          return
+        }
         discussion.pending = null
         discussion.thinking = false
         discussion.stream = null
+        discussion.abort = null
         discussion.error = err && err.message ? err.message : String(err)
         renderTranscript()
       }
@@ -698,6 +814,7 @@ window.__ModuleLoader__.load({
 
     function closePanel() {
       if (discussion) {
+        if (discussion.abort) discussion.abort.abort()
         const id = discussion.id
         fetch(DISCARD_PATH, {
           method: 'POST',
@@ -729,6 +846,7 @@ window.__ModuleLoader__.load({
         thinking: false,
         error: '',
         stream: null,
+        abort: null,
       }
       renderPanel()
     }
@@ -854,6 +972,7 @@ window.__ModuleLoader__.load({
             panel = null
           }
           if (discussion) {
+            if (discussion.abort) discussion.abort.abort()
             const id = discussion.id
             discussion = null
             fetch(DISCARD_PATH, {

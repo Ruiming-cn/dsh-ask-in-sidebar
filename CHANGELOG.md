@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.2.1 - 2026-11-20
+
+- Read the main session's latest `request/header` through the host `sessionQuery`
+  service instead of the removed `Session.events` property, so the sidebar
+  again reuses the main conversation's provider/model route. A composition
+  without `sessionQuery` logs a warning and falls back to the live agent
+  options, then to the first configured provider.
+- Sanitize main-session history for the current message model: drop system,
+  developer, and tool messages, keep only text blocks in assistant/user
+  messages, and strip provider replay state that describes removed tool-call
+  blocks. A main conversation with tool calls no longer breaks sidebar requests
+  or duplicates the main system prompt.
+- Complete answers when an adapter emits only `block-end` for a text block, so
+  a stream without text deltas no longer finishes empty or truncated.
+- Add a **Stop** control while an answer streams. It keeps the text received so
+  far and shows no error.
+- Add a **Copy** control to every completed sidebar answer that copies the raw
+  Markdown to the clipboard.
+- Add official plugin metadata: `locale/en.json`, `locale/zh.json`, and an
+  original `icon.svg`.
+
+Compatibility: verified against DSH 0.2.2-rc.5.
+
 ## 0.2.0 - 2026-08-30
 
 - Migrated the host routes to the Alpha.2 DSH Connection Origin and browser-authentication checks.

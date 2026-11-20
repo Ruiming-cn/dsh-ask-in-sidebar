@@ -72,14 +72,13 @@ test('findLatestHeader returns the newest request/header event', () => {
   const events = [
     { type: 'user/message', data: {} },
     { type: 'request/header', data: { header: { config: { provider: 'a', model: '1' } } } },
-    { type: 'request/header', data: { header: { config: { provider: 'b', model: '2' }, system: 'sys' } } },
+    { type: 'request/header', data: { header: { config: { provider: 'b', model: '2' } } } },
   ]
   const header = findLatestHeader(events)
   assert.equal(header.config.provider, 'b')
-  assert.equal(header.system, 'sys')
 })
 
-test('callConfigFromHeader extracts provider, model, system and scalars', () => {
+test('callConfigFromHeader extracts provider, model and scalars without a system prompt', () => {
   const config = callConfigFromHeader({
     config: {
       provider: 'deepseek-official',
@@ -95,7 +94,7 @@ test('callConfigFromHeader extracts provider, model, system and scalars', () => 
   assert.equal(config.reasoningEffort, 'high')
   assert.equal(config.temperature, 0.7)
   assert.equal(config.maxTokens, 2048)
-  assert.equal(config.system, 'You are a helpful assistant.')
+  assert.ok(!('system' in config))
 })
 
 test('callConfigFromHeader returns null when provider or model is missing', () => {
@@ -112,29 +111,67 @@ test('callConfigFromAgent extracts agent options', () => {
   assert.equal(callConfigFromAgent({ options: {} }), null)
 })
 
-test('sanitizeMainMessages drops tool calls/results and keeps text', () => {
+test('sanitizeMainMessages drops system, developer, and tool messages', () => {
   const messages = [
-    {
-      role: 'user',
-      content: [{ type: 'text', text: 'hello' }],
-    },
+    { role: 'system', content: [{ type: 'text', text: 'main system prompt' }] },
+    { role: 'developer', content: [{ type: 'tool-addition', toolName: 'bash' }] },
+    { role: 'tool', content: [{ type: 'text', text: 'tool output' }] },
+    { role: 'user', content: [{ type: 'text', text: 'hello' }] },
+  ]
+  const sanitized = sanitizeMainMessages(messages)
+  assert.deepEqual(sanitized.map(message => message.role), ['user'])
+  assert.deepEqual(sanitized[0].content, [{ type: 'text', text: 'hello' }])
+})
+
+test('sanitizeMainMessages keeps only text blocks in assistant and user messages', () => {
+  const messages = [
     {
       role: 'assistant',
       content: [
-        { type: 'text', text: 'I will call' },
+        { type: 'text', text: 'answer' },
+        { type: 'reasoning', text: 'hidden reasoning' },
         { type: 'tool-call', id: 'c1', name: 'tool', arguments: '{}' },
+        { type: 'tool-addition', toolName: 'tool' },
+        { type: 'tool-removal', toolName: 'tool' },
+        { type: 'image', mediaType: 'image/png' },
+        { type: 'file', name: 'notes.md' },
       ],
     },
     {
       role: 'user',
-      content: [{ type: 'tool-result', toolCallId: 'c1', content: [{ type: 'text', text: 'ok' }] }],
+      content: [
+        { type: 'text', text: 'question' },
+        { type: 'image', mediaType: 'image/png' },
+      ],
     },
   ]
   const sanitized = sanitizeMainMessages(messages)
   assert.equal(sanitized.length, 2)
-  assert.equal(sanitized[0].content[0].text, 'hello')
-  assert.equal(sanitized[1].role, 'assistant')
-  assert.deepEqual(sanitized[1].content, [{ type: 'text', text: 'I will call' }])
+  assert.deepEqual(sanitized[0].content, [{ type: 'text', text: 'answer' }])
+  assert.deepEqual(sanitized[1].content, [{ type: 'text', text: 'question' }])
+})
+
+test('sanitizeMainMessages drops messages left with no text', () => {
+  const messages = [
+    { role: 'user', content: [{ type: 'image', mediaType: 'image/png' }] },
+    { role: 'assistant', content: [{ type: 'tool-call', id: 'c1', name: 'tool', arguments: '{}' }] },
+    { role: 'assistant', content: [] },
+    { role: 'developer', content: [{ type: 'text', text: 'not a conversation role' }] },
+  ]
+  assert.deepEqual(sanitizeMainMessages(messages), [])
+})
+
+test('sanitizeMainMessages drops the provider replay state of retained assistants', () => {
+  const messages = [
+    {
+      role: 'assistant',
+      content: [{ type: 'text', text: 'answer' }],
+      source: { kind: 'model', provider: 'deepseek', model: 'reasoner', replayState: { reasoning: 'leaked' } },
+    },
+  ]
+  const [sanitized] = sanitizeMainMessages(messages)
+  assert.deepEqual(sanitized.content, [{ type: 'text', text: 'answer' }])
+  assert.deepEqual(sanitized.source, { kind: 'model', provider: 'deepseek', model: 'reasoner' })
 })
 
 test('sanitizeMainMessages drops a trailing incomplete tool-call assistant message', () => {
@@ -179,6 +216,17 @@ test('streamAnswerText uses block-end when no delta arrived for that block', asy
   ]
   const text = await streamAnswerText(stream)
   assert.equal(text, 'Whole block')
+})
+
+test('streamAnswerText folds deltas and block-end text per block index', async () => {
+  const stream = [
+    { type: 'text-delta', index: 0, text: 'Hello' },
+    { type: 'block-end', index: 0, block: { type: 'text', text: 'Hello' } },
+    { type: 'block-end', index: 1, block: { type: 'text', text: ' world' } },
+    { type: 'finish', reason: { kind: 'stop' } },
+  ]
+  const text = await streamAnswerText(stream)
+  assert.equal(text, 'Hello world')
 })
 
 test('streamAnswerText throws on an error finish', async () => {
