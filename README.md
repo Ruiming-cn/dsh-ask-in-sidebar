@@ -9,6 +9,8 @@
 
 一个 DeepSeek Harness (DSH) Web 插件：在助手回答中选中任意文本，即可在右侧临时侧边栏中基于主对话现有上下文提问，不打断、不修改主对话。
 
+> **不想打断主对话，又想追问一两句？** 选中文字，在右侧面板里继续问——上下文用多少由你决定，回答可随时停止、复制或重新生成。
+
 ## 功能特性
 
 - 在主 DSH 对话中选中助手回答中的任意文本（方案、术语、解释等）。
@@ -21,7 +23,8 @@
   - 可折叠的思考过程
   - 思考时间、首字时间、总耗时和 token 用量（可用时）
 - 回答以 Markdown 安全渲染，支持标题、列表、行内代码、代码块、引用、链接和表格。
-- 回答流式生成时可点击 **停止** 中止，已收到的内容会保留；完成的回答可点击 **复制** 复制 Markdown 原文。
+- 回答流式生成时可点击 **停止** 中止，已收到的内容会保留；完成的回答可点击 **复制** 复制 Markdown 原文，或 **重新生成** 用同一问题再问一次。
+- 面板顶部可切换**上下文范围**：全部上下文、最近 20 条、最近 6 条、仅引用文本。范围按浏览器保存，追问时即时生效，不必重开面板。
 - 首个问题基于主对话在发起提问时的已有 LLM 消息历史快照 + 引用文本进行回答。
 - 同一侧边栏讨论内支持连续追问。
 - 关闭面板即丢弃当前讨论及其 host 端内存快照。
@@ -43,7 +46,7 @@
 dsh plugin --profile web add github:Ruiming-cn/dsh-ask-in-sidebar
 
 # 或从固定版本 Release 的预构建包安装（无需构建）
-dsh plugin --profile web add https://github.com/Ruiming-cn/dsh-ask-in-sidebar/releases/download/v0.2.1/dsh-ask-in-sidebar-0.2.1.tgz
+dsh plugin --profile web add https://github.com/Ruiming-cn/dsh-ask-in-sidebar/releases/download/v0.3.0/dsh-ask-in-sidebar-0.3.0.tgz
 
 # 或从本地检出构建后再安装
 npm run build
@@ -70,6 +73,18 @@ dsh plugin --profile web add /path/to/dsh-ask-in-sidebar
 ## 配置
 
 无插件专用配置。侧边栏使用主对话当前使用的 provider/model 路由；若没有 `request/header`，则依次回退到当前 agent options、第一个已配置的 LLM provider。侧边栏使用一个轻量的“只回答、不调用工具”的独立 system prompt，避免复用主 Agent 的复杂工具系统提示。
+
+## 上下文范围
+
+面板顶部的下拉框决定这次提问要复用多少主对话上下文：
+
+| 选项 | 发送内容 |
+| --- | --- |
+| 全部上下文（默认） | 快照里清洗后的全部主对话消息 + 侧边栏自身的问答历史。 |
+| 最近 20 条 / 最近 6 条 | 只带主对话消息的最后 N 条，长对话提问更便宜、更聚焦。 |
+| 仅引用文本 | 完全不带主对话消息，只带引用文本与侧边栏历史。 |
+
+范围是**每次提问时**读取的，因此在同一讨论里切到更短的上下文无需重开面板；快照本身、`deriveMessages` 的结果都不会被改写。选择保存在浏览器本地（`dsh-ask-in-sidebar:context-scope`），刷新页面后保留。
 
 ## 上下文快照边界
 
@@ -107,3 +122,4 @@ npm run check   # test + build
 - host 端 HTTP 路由 + 同源防护模式、浏览器 `window.__ModuleLoader__` / 纯 DOM 注入模式参考了 DSH 生态中同样采用该模式的 MIT 许可插件：
   - [`dsh-better-at`](https://github.com/Ruiming-cn/dsh-better-at)
 - 本仓库未复制第三方代码；实现为原创，并在 API 形状或模式衍生自 DSH 生态处注明来源。
+

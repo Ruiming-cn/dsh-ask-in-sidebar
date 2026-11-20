@@ -11,6 +11,10 @@ A DeepSeek Harness (DSH) web plugin that lets you select text in an assistant
 answer and ask questions about it in an ephemeral right-side panel, using the
 main conversation's existing context without modifying or reloading it.
 
+> **Don't want to interrupt the main conversation just to ask one question?**
+> Select the text and keep asking in the right-hand panel — you decide how much
+> context it reuses, and every answer can be stopped, copied or regenerated.
+
 ## Features
 
 - Select any text inside an assistant answer in the main DSH conversation.
@@ -26,7 +30,11 @@ main conversation's existing context without modifying or reloading it.
 - Assistant answers are rendered as safe Markdown: headings, lists, inline
   code, code blocks, blockquotes, links, and tables.
 - While an answer streams, **Stop** aborts it and keeps the text received so
-  far; completed answers offer **Copy** for the raw Markdown.
+  far; completed answers offer **Copy** for the raw Markdown and **Regenerate**
+  to ask the same question again.
+- The panel header switches the **context scope**: full context, last 20
+  messages, last 6 messages, or quote only. The choice is stored per browser and
+  applies to the next follow-up without reopening the panel.
 - The first question is answered from a snapshot of the main conversation's
   existing LLM message history plus the quoted text.
 - Follow-up questions remain inside the same ephemeral sidebar discussion.
@@ -58,7 +66,7 @@ Node.js 20+.
 dsh plugin --profile web add github:Ruiming-cn/dsh-ask-in-sidebar
 
 # or install the prebuilt pinned GitHub release tarball (no build step)
-dsh plugin --profile web add https://github.com/Ruiming-cn/dsh-ask-in-sidebar/releases/download/v0.2.1/dsh-ask-in-sidebar-0.2.1.tgz
+dsh plugin --profile web add https://github.com/Ruiming-cn/dsh-ask-in-sidebar/releases/download/v0.3.0/dsh-ask-in-sidebar-0.3.0.tgz
 
 # or build from a local checkout and install it
 npm run build
@@ -94,6 +102,22 @@ available, it falls back to the live agent's options, then to the first
 configured LLM provider. The sidebar uses a small dedicated tool-less system
 prompt so it answers from the supplied context instead of trying to use the
 main agent's tools.
+
+## Context scope
+
+The selector in the panel header decides how much of the main conversation one
+question reuses:
+
+| Option | What is sent |
+| --- | --- |
+| Full context (default) | Every sanitized main-conversation message in the snapshot plus the sidebar's own history. |
+| Last 20 / last 6 messages | Only the last N main-conversation messages, which keeps long interviews cheap and focused. |
+| Quote only | No main-conversation messages at all: just the quoted text and the sidebar history. |
+
+The scope is read **per question**, so switching to a shorter context applies to
+the next follow-up without reopening the panel; the snapshot and its
+`deriveMessages` result stay unchanged. The choice is stored in the browser
+(`dsh-ask-in-sidebar:context-scope`) and survives a reload.
 
 ## Context snapshot boundaries
 
@@ -152,3 +176,4 @@ Release workflow: see [RELEASING.md](./RELEASING.md).
 - No third-party code is copied into this repository. The implementation is
   original and attributed to the DSH ecosystem where API shape or patterns are
   derived from it.
+

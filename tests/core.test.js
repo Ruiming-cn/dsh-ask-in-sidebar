@@ -6,9 +6,11 @@ import {
   callConfigFromHeader,
   findLatestHeader,
   formatInitialPrompt,
+  normalizeContextLimit,
   normalizeHistory,
   normalizeText,
   sanitizeMainMessages,
+  scopeMainMessages,
   streamAnswerText,
 } from '../src/core.js'
 
@@ -255,4 +257,24 @@ test('streamAnswerText ignores malformed chunks and non-text deltas', async () =
   ]
   const text = await streamAnswerText(stream)
   assert.equal(text, 'ok')
+})
+
+test('normalizeContextLimit accepts -1, 0 and bounded positive counts', () => {
+  assert.equal(normalizeContextLimit(-1), -1)
+  assert.equal(normalizeContextLimit(0), 0)
+  assert.equal(normalizeContextLimit(20), 20)
+  assert.equal(normalizeContextLimit('6'), 6)
+  assert.equal(normalizeContextLimit(-2), 0)
+  assert.equal(normalizeContextLimit(201), 0)
+  assert.equal(normalizeContextLimit(1.5), 0)
+  assert.equal(normalizeContextLimit(undefined), 0)
+})
+
+test('scopeMainMessages applies the full, tail and quote-only scopes', () => {
+  const messages = [{ role: 'user' }, { role: 'assistant' }, { role: 'user' }, { role: 'assistant' }]
+  assert.deepEqual(scopeMainMessages(messages, 0), messages)
+  assert.deepEqual(scopeMainMessages(messages, 2), messages.slice(-2))
+  assert.deepEqual(scopeMainMessages(messages, 99), messages)
+  assert.deepEqual(scopeMainMessages(messages, -1), [])
+  assert.deepEqual(scopeMainMessages(undefined, 2), [])
 })

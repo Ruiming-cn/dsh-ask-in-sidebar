@@ -88,6 +88,39 @@ function withoutReplayState(source) {
   return rest
 }
 
+/** Largest accepted `contextLimit`; a sidebar question never needs more. */
+export const MAX_CONTEXT_LIMIT = 200
+
+/** `contextLimit` value meaning "do not include the main history at all". */
+export const NO_MAIN_CONTEXT = -1
+
+/**
+ * Normalize a client-supplied context limit.
+ * @param {unknown} value - raw payload field.
+ * @returns {number} `NO_MAIN_CONTEXT`, `0` for the full history, or a positive count.
+ */
+export function normalizeContextLimit(value) {
+  const limit = Number(value)
+  if (!Number.isInteger(limit) || limit < NO_MAIN_CONTEXT || limit > MAX_CONTEXT_LIMIT) return 0
+  return limit
+}
+
+/**
+ * Keep only the main-history tail the caller asked for.
+ *
+ * The scope is a request-time choice, not a snapshot-time one: the same
+ * discussion can switch from the full history to a short tail (or to the quote
+ * alone) on its next question without re-reading the main session.
+ * @param {unknown[]} messages - sanitized main-history messages.
+ * @param {number} contextLimit - `NO_MAIN_CONTEXT`, `0` (all), or a positive count.
+ */
+export function scopeMainMessages(messages, contextLimit) {
+  if (!Array.isArray(messages)) return []
+  if (contextLimit === NO_MAIN_CONTEXT) return []
+  if (!Number.isInteger(contextLimit) || contextLimit <= 0) return messages
+  return messages.length <= contextLimit ? messages : messages.slice(-contextLimit)
+}
+
 /**
  * Build the sidebar LLM messages.
  *

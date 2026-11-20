@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.0 - 2026-11-20
+
+- Added the panel-header **context scope**: full context, last 20 messages, last
+  6 messages, or quote only. The host now accepts a validated `contextLimit`
+  (`-1` quote only, `0` full, `1..200` tail) and truncates the sanitized main
+  history per request, so a scope change applies to the next follow-up without
+  reopening the panel. The choice is stored in the browser.
+- Added **Regenerate**: the same question is asked again without duplicating it
+  in the sidebar discussion.
+- Documented the scope semantics in both READMEs.
+
 ## 0.2.1 - 2026-11-20
 
 - Read the main session's latest `request/header` through the host `sessionQuery`

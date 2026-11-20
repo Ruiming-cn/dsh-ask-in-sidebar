@@ -15,6 +15,28 @@ window.__ModuleLoader__.load({
     const NS = 'dsh-ask-in-sidebar'
     const ANSWER_STREAM_PATH = '/__dsh-ask-in-sidebar/answer-stream'
     const DISCARD_PATH = '/__dsh-ask-in-sidebar/discard'
+    // Main-context scope for one sidebar request: 0 = full history,
+    // a positive count = last N sanitized messages, -1 = quote only.
+    const CONTEXT_SCOPE_KEY = 'dsh-ask-in-sidebar:context-scope'
+    const CONTEXT_SCOPES = [0, 20, 6, -1]
+
+    function readContextScope() {
+      try {
+        const value = Number(localStorage.getItem(CONTEXT_SCOPE_KEY))
+        return CONTEXT_SCOPES.includes(value) ? value : 0
+      } catch {
+        return 0
+      }
+    }
+
+    function writeContextScope(value) {
+      if (!CONTEXT_SCOPES.includes(value)) return
+      try {
+        localStorage.setItem(CONTEXT_SCOPE_KEY, String(value))
+      } catch {
+        /* the choice still applies to this page lifetime */
+      }
+    }
 
     const dict = {
       zh: {
@@ -33,6 +55,13 @@ window.__ModuleLoader__.load({
         copy: '复制',
         copied: '已复制',
         copyAria: '复制回答 Markdown',
+        scopeLabel: '上下文',
+        scopeFull: '全部上下文',
+        scope20: '最近 20 条',
+        scope6: '最近 6 条',
+        scopeQuote: '仅引用文本',
+        retry: '重新生成',
+        retryAria: '重新生成这条回答',
         error: '出错了',
         empty: '请输入问题。',
         started: '已开始',
@@ -55,6 +84,13 @@ window.__ModuleLoader__.load({
         copy: 'Copy',
         copied: 'Copied',
         copyAria: 'Copy the answer Markdown',
+        scopeLabel: 'Context',
+        scopeFull: 'Full context',
+        scope20: 'Last 20 messages',
+        scope6: 'Last 6 messages',
+        scopeQuote: 'Quote only',
+        retry: 'Regenerate',
+        retryAria: 'Regenerate this answer',
         error: 'Error',
         empty: 'Please enter a question.',
         started: 'Started',
@@ -373,6 +409,18 @@ window.__ModuleLoader__.load({
         'border-radius:6px', 'color:var(--dsw-alias-label-tertiary,#8a8a8e)',
         'font:inherit', 'font-size:11px', 'line-height:16px', 'cursor:pointer',
       ].join(';'),
+      scopeSelect: [
+        'flex:none', 'max-width:150px', 'padding:3px 6px',
+        'border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.4))',
+        'border-radius:8px', 'background:transparent',
+        'color:var(--dsw-alias-label-secondary,#555)', 'font:inherit', 'font-size:12px',
+        'line-height:18px', 'cursor:pointer',
+      ].join(';'),
+      retryBtn: [
+        'border:none', 'background:transparent', 'padding:2px 6px',
+        'border-radius:6px', 'color:var(--dsw-alias-label-tertiary,#8a8a8e)',
+        'font:inherit', 'font-size:11px', 'line-height:16px', 'cursor:pointer',
+      ].join(';'),
     }
 
     // --- DOM helpers ------------------------------------------------------------
@@ -579,6 +627,14 @@ window.__ModuleLoader__.load({
         if (discussion.pending) {
           appendMessage(messagesEl, { role: 'user', text: discussion.pending.text })
         }
+        const lastItem = discussion.history[discussion.history.length - 1]
+        if (lastItem && lastItem.role === 'assistant' && !discussion.thinking) {
+          const retry = el('button', S.retryBtn, t('retry'))
+          retry.type = 'button'
+          retry.setAttribute('aria-label', t('retryAria'))
+          retry.addEventListener('click', () => retryLastAnswer())
+          messagesEl.appendChild(retry)
+        }
         if (discussion.thinking && !discussion.stream) {
           const note = el('div', S.thinking, t('thinking'))
           messagesEl.appendChild(note)
@@ -611,12 +667,24 @@ window.__ModuleLoader__.load({
 
       const header = el('div', S.header)
       const title = el('h2', S.headerTitle, t('title'))
+      const scopeSelect = el('select', S.scopeSelect)
+      scopeSelect.setAttribute('data-aiq-scope', '1')
+      scopeSelect.setAttribute('aria-label', t('scopeLabel'))
+      scopeSelect.title = t('scopeLabel')
+      for (const [value, key] of [[0, 'scopeFull'], [20, 'scope20'], [6, 'scope6'], [-1, 'scopeQuote']]) {
+        const option = el('option', '', t(key))
+        option.value = String(value)
+        scopeSelect.appendChild(option)
+      }
+      scopeSelect.value = String(readContextScope())
+      scopeSelect.addEventListener('change', () => writeContextScope(Number(scopeSelect.value)))
       const closeBtn = el('button', S.closeBtn, '×')
       closeBtn.type = 'button'
       closeBtn.setAttribute('aria-label', t('closeAria'))
       closeBtn.title = t('close')
       closeBtn.addEventListener('click', () => closePanel())
       header.appendChild(title)
+      header.appendChild(scopeSelect)
       header.appendChild(closeBtn)
       p.appendChild(header)
 
@@ -677,7 +745,28 @@ window.__ModuleLoader__.load({
       const ta = panel.querySelector('[data-aiq-input]')
       const question = ta ? ta.value.trim() : ''
       if (!question || discussion.thinking || discussion.pending) return
+      await sendQuestion(question)
+    }
+
+    /** Ask the last question again, without duplicating it in the discussion. */
+    function retryLastAnswer() {
+      if (!discussion || discussion.thinking || discussion.pending) return
+      const last = discussion.history[discussion.history.length - 1]
+      if (!last || last.role !== 'assistant') return
+      discussion.history.pop()
+      const previous = discussion.history[discussion.history.length - 1]
+      if (previous && previous.role === 'user') discussion.history.pop()
+      const question = discussion.lastQuestion || ''
+      if (!question) return
+      discussion.error = ''
+      void sendQuestion(question)
+    }
+
+    async function sendQuestion(question) {
+      if (!discussion || !panel) return
+      if (!question || discussion.thinking || discussion.pending) return
       const isFirst = discussion.history.length === 0
+      discussion.lastQuestion = question
       const displayText = isFirst && discussion.quote
         ? `Quoted from the main conversation:\n"""\n${discussion.quote}\n"""\n\nQuestion: ${question}`
         : question
@@ -685,6 +774,7 @@ window.__ModuleLoader__.load({
       discussion.pending = { role: 'user', text: displayText }
       discussion.thinking = true
       discussion.error = ''
+      const ta = panel.querySelector('[data-aiq-input]')
       if (ta) ta.value = ''
 
       const req = {
@@ -692,6 +782,7 @@ window.__ModuleLoader__.load({
         sessionId: discussion.sessionId,
         quote: discussion.quote,
         question,
+        contextLimit: readContextScope(),
         history: discussion.history.map(item => ({ role: item.role, text: item.text })),
       }
 
@@ -842,6 +933,7 @@ window.__ModuleLoader__.load({
         sessionId,
         quote: String(quote || '').trim(),
         history: [],
+        lastQuestion: '',
         pending: null,
         thinking: false,
         error: '',

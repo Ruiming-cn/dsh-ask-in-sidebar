@@ -1,7 +1,7 @@
 {
   "name": "dsh-ask-in-sidebar",
-  "version": "0.2.1",
-  "description": "Ask about selected assistant text in an ephemeral DSH Web sidebar using a snapshot of the main conversation.",
+  "version": "0.3.0",
+  "description": "Ask about selected assistant text in an ephemeral DSH Web sidebar: choose how much of the main conversation to reuse, stop or regenerate answers, and never touch the main conversation.",
   "license": "MIT",
   "type": "module",
   "main": "lib/index.js",
@@ -55,11 +55,21 @@
     "@deepseek-ai/dsh-client-ui-slots": "*"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/dsh-client-connection": { "optional": true },
-    "@deepseek-ai/dsh-host-webserver": { "optional": true },
-    "@deepseek-ai/dsh-api-session-controller": { "optional": true },
-    "@deepseek-ai/dsh-client-ui-layout": { "optional": true },
-    "@deepseek-ai/dsh-client-ui-slots": { "optional": true }
+    "@deepseek-ai/dsh-client-connection": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-host-webserver": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-api-session-controller": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-ui-layout": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-ui-slots": {
+      "optional": true
+    }
   },
   "engines": {
     "node": ">=20"
@@ -73,6 +83,7 @@
     "sidebar-qa",
     "selection",
     "context",
+    "context-scope",
     "ephemeral",
     "web-ui"
   ],

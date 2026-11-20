@@ -15,9 +15,11 @@ import {
   callConfigFromAgent,
   callConfigFromHeader,
   findLatestHeader,
+  normalizeContextLimit,
   normalizeHistory,
   normalizeText,
   sanitizeMainMessages,
+  scopeMainMessages,
   streamAnswerText,
 } from './core.js'
 
@@ -202,7 +204,9 @@ async function prepareAnswer(ctx, payload) {
 
   const config = await resolveCallConfig(ctx, snapshot.sessionId, snapshot.header)
   const sidebarMessages = buildSidebarMessages({ history, quote, question })
-  const messages = [...sanitizeMainMessages(snapshot.messages), ...sidebarMessages]
+  const contextLimit = normalizeContextLimit(payload.contextLimit)
+  const mainMessages = scopeMainMessages(sanitizeMainMessages(snapshot.messages), contextLimit)
+  const messages = [...mainMessages, ...sidebarMessages]
 
   const llm = ctx.get('llm')
   if (!llm || typeof llm.stream !== 'function') {
